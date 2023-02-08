@@ -8,4 +8,5 @@ import com.he.resetpin.model.CodeOTP;
 @Repository
 public interface CodeOTPRepository extends JpaRepository<CodeOTP, Integer>{
     
+    CodeOTP findByCodeOTPAndByPartenaireEmail(String code, String email);
 }

@@ -1,13 +1,14 @@
 package com.he.resetpin.model;
 
 import java.util.Date;
-
+import java.util.Set;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -38,6 +39,9 @@ public class Partenaire {
     
     private Boolean reinitialisable;
     
-    private Date dateReinitialisation = new Date();
+    private Date dateReinitialisation;
+
+    @OneToMany(mappedBy = "partenaire")
+    private Set<CodeOTP> codeOTPs;
     
 }

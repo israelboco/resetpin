@@ -1,6 +1,8 @@
 package com.he.resetpin.service;
 
-import java.util.Random;
+
+import java.util.Date;
+import java.util.Calendar;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,13 +32,30 @@ public class PartenaireService {
     }
 
     public Partenaire createPin(Partenaire p){
-        Random random = new Random();
-        // String encodePin;
-        int nb;
-        nb = 10000 + random.nextInt(89999);
-        // encodePin = hashCode();
-        p.setPin(Integer.toString(nb));
+        
+        // p.setPin(Integer.toString(nb));
         return partenaireRepository.save(p);
     }
+
+    public Boolean verificatePin(Partenaire p){
+        partenaireRepository.findByEmail(p.getEmail()).getPin(); 
+        return true;
+    }
+
+    public Boolean reinitialisablePin(Partenaire p){
+        Boolean reinitiable = false;
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(new Date());
+        cal.add(Calendar.MINUTE, 5);
+        p.setReinitialisable(true);
+        p.setDateReinitialisation(cal.getTime());
+        p = partenaireRepository.save(p);
+        if(p.getReinitialisable()){
+            reinitiable = true;
+        }
+        return reinitiable;
+    }
+
+
 
 }

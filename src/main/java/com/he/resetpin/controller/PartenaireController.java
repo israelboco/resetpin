@@ -1,5 +1,7 @@
 package com.he.resetpin.controller;
 
+import java.util.Random;
+
 import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,11 +35,15 @@ public class PartenaireController {
     public Response createPin(@RequestBody String email){
         Partenaire p = partenaireService.getPartenaireByEmail(email);
         Response response = new Response();
+        // Email incorrete
         if(p == null){
             response.setCode(200);
             response.setMessage("email incorrete");
         }
+        // Creation du pin
         else {
+            Random code = new Random();
+            p.setPin(Integer.toString(10000 + code.nextInt(89999)));
             response.setCode(200);
             response.setMessage("pin creer");
             response.setData(partenaireService.createPin(p));
@@ -56,15 +62,48 @@ public class PartenaireController {
         }
         // Reset pin
         else if(p.getReinitialisable()) {
-            response.setCode(200);
-            response.setMessage("reset pin");
-            // response.setData(partenaireService.createPin(p));
+            resetPin(p);
         }
         // Creer code OTP
         else{
             response.setCode(200);
             response.setMessage("code OTP creer: ");
             // response.setData(partenaireService.createPin(p));
+        }
+        return response;
+    }
+
+    @PostMapping(path="/reset/pin", consumes = {"application/json"})
+    public Response resetPin(@RequestBody Partenaire partenaire){
+        Partenaire p = partenaireService.getPartenaireByEmail(partenaire.getEmail());
+        Response response = new Response();
+        // Email incorrete
+        if(p.getId() == 0){
+            response.setCode(200);
+            response.setMessage("email incorrete");
+        }
+        // Creation du pin
+        else {
+            response.setCode(200);
+            response.setMessage("pin creer");
+            response.setData(partenaireService.createPin(p));
+        }
+        return response;
+    }
+
+    @PostMapping(path="/verificate/pin", consumes = {"application/json"})
+    public Response verificatePin(@RequestBody Partenaire partenaire){
+        Partenaire p = partenaireService.getPartenaireByEmail(partenaire.getEmail());
+        Response response = new Response();
+        // Email incorrete
+        if(p.getId() == 0){
+            response.setCode(200);
+            response.setMessage("email incorrete");
+        }
+        // Verification du pin
+        else if(partenaireService.verificatePin(p)){
+            response.setCode(200);
+            response.setMessage("pin authentifié");
         }
         return response;
     }
