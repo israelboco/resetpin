@@ -5,9 +5,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class verificateCodeOTP {
+public class VerificationCodeOTP {
     
-    private String Code;
+    private String code;
 
     private String email;
 }

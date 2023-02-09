@@ -9,4 +9,5 @@ import com.he.resetpin.model.Validation;
 public interface ValidationRepository extends JpaRepository<Validation, Integer>{
     
     Page<Validation> findByStatus(Boolean status ,Pageable pageable);
+    Validation findById(int id);
 }

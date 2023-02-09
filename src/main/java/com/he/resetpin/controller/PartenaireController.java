@@ -1,17 +1,21 @@
 package com.he.resetpin.controller;
 
-import java.util.Random;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.bind.annotation.RequestBody;
 
 
 import com.he.resetpin.model.Partenaire;
 import com.he.resetpin.model.Response;
+import com.he.resetpin.model.VerificationCodeOTP;
+import com.he.resetpin.service.CodeOTPService;
 import com.he.resetpin.service.PartenaireService;
 
 @RestController
@@ -20,6 +24,9 @@ public class PartenaireController {
     
     @Autowired
     private PartenaireService partenaireService;
+
+    @Autowired
+    private CodeOTPService codeOTPService;
 
     @PostMapping(path="", consumes = {"application/json"})
     public Response savePartenaire(@RequestBody Partenaire p){
@@ -31,50 +38,50 @@ public class PartenaireController {
         return response;
     }
 
-    @PostMapping(path="/create pin", consumes = {"application/json"})
-    public Response createPin(@RequestBody String email){
-        Partenaire p = partenaireService.getPartenaireByEmail(email);
+    @PostMapping(path="/createpin", consumes = {"application/json"})
+    public Response createPin(@RequestBody String[] emailcode) throws NoSuchAlgorithmException, InvalidKeySpecException{
+        Partenaire p = partenaireService.getPartenaireByEmail(emailcode[0]);
         Response response = new Response();
         // Email incorrete
         if(p == null){
             response.setCode(200);
-            response.setMessage("email incorrete");
+            response.setMessage("email incorrete : " + emailcode);
         }
         // Creation du pin
         else {
-            Random code = new Random();
-            p.setPin(Integer.toString(10000 + code.nextInt(89999)));
             response.setCode(200);
             response.setMessage("pin creer");
-            response.setData(partenaireService.createPin(p));
+            response.setData(partenaireService.createPin(p, emailcode[1]));
         }
         return response;
     }
 
-    @PostMapping("/demande reinitialisation")
-    public Response demandeReinitialisation(@RequestBody String email){
+    @PostMapping("/demandereinitialisation")
+    public Response demandeReinitialisation(@RequestBody String email) throws NoSuchAlgorithmException, InvalidKeySpecException{
         Partenaire p = partenaireService.getPartenaireByEmail(email);
         Response response = new Response();
         // Email incorrete
         if(p == null){
             response.setCode(200);
-            response.setMessage("email incorrete");
+            response.setMessage("email incorrete : " + email);
         }
         // Reset pin
         else if(p.getReinitialisable()) {
-            resetPin(p);
+            String url = "127.0.0.1:8080/api/partenaire/resetpin";
+            RestTemplate restTemplate = new RestTemplate();
+            response = restTemplate.getForObject(url, Response.class, p);
         }
-        // Creer code OTP
+        // Creation de code OTP
         else{
             response.setCode(200);
-            response.setMessage("code OTP creer: ");
-            // response.setData(partenaireService.createPin(p));
+            response.setMessage("code OTP creer dans l'objet ");
+            response.setData(codeOTPService.createCode(p));
         }
         return response;
     }
 
-    @PostMapping(path="/reset/pin", consumes = {"application/json"})
-    public Response resetPin(@RequestBody Partenaire partenaire){
+    @PostMapping(path="/resetpin", consumes = {"application/json"})
+    public Response resetPin(@RequestBody Partenaire partenaire) throws NoSuchAlgorithmException, InvalidKeySpecException{
         Partenaire p = partenaireService.getPartenaireByEmail(partenaire.getEmail());
         Response response = new Response();
         // Email incorrete
@@ -85,39 +92,50 @@ public class PartenaireController {
         // Creation du pin
         else {
             response.setCode(200);
-            response.setMessage("pin creer");
-            response.setData(partenaireService.createPin(p));
+            response.setMessage("pin generé");
+            response.setData(partenaireService.createPin(p, partenaire.getPin()));
         }
         return response;
     }
 
-    @PostMapping(path="/verificate/pin", consumes = {"application/json"})
-    public Response verificatePin(@RequestBody Partenaire partenaire){
+    @PostMapping(path="/verificationpin", consumes = {"application/json"})
+    public Response verificatePin(@RequestBody Partenaire partenaire) throws NoSuchAlgorithmException, InvalidKeySpecException{
         Partenaire p = partenaireService.getPartenaireByEmail(partenaire.getEmail());
         Response response = new Response();
         // Email incorrete
-        if(p.getId() == 0){
+        if(p == null){
             response.setCode(200);
             response.setMessage("email incorrete");
         }
         // Verification du pin
-        else if(partenaireService.verificatePin(p)){
+        else if(partenaireService.verificatePin(p, partenaire.getPin())){
             response.setCode(200);
-            response.setMessage("pin authentifié");
+            response.setMessage("pin authentique");
+        }
+        else{
+            response.setCode(200);
+            response.setMessage("pin non authentique");
         }
         return response;
     }
 
-    // @GetMapping(path="/cours/{nom}", produces= "application/json")
-	// public Response getCourByNom(@PathVariable String nom) {
-		
-	// 	Response response = new Response();
-	// 	response.setCode(200);
-	// 	response.setMessage("get recherche effectué");
-	// 	response.setData(courService.nomCour(nom));
-		
-	// 	return response;
-	// }
+    @PostMapping(path="/certificationdemande", consumes = {"application/json"})
+    public Response certificationDemande(@RequestBody VerificationCodeOTP valeur){
+        Partenaire p = partenaireService.getPartenaireByEmail(valeur.getEmail());
+        Response response = new Response();
+        // Email incorrete
+        if(p == null){
+            response.setCode(200);
+            response.setMessage("email incorrete");
+        }
+        // Enregitrement de la validation si certification reussi
+        else{
+            response.setCode(200);
+            response.setMessage("codeOTP certifié");
+            response.setData(codeOTPService.verificateCodeOTP(valeur));
+        }
+        return response;
+    }
 	
 	
 	// @DeleteMapping(path="/cours/{codeID}", produces= "application/json")

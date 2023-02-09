@@ -9,8 +9,10 @@ import org.springframework.stereotype.Service;
 
 import com.he.resetpin.model.CodeOTP;
 import com.he.resetpin.model.Partenaire;
-import com.he.resetpin.model.verificateCodeOTP;
+import com.he.resetpin.model.Validation;
+import com.he.resetpin.model.VerificationCodeOTP;
 import com.he.resetpin.repository.CodeOTPRepository;
+import com.he.resetpin.repository.ValidationRepository;
 
 @Service
 public class CodeOTPService {
@@ -18,17 +20,27 @@ public class CodeOTPService {
     @Autowired
     private CodeOTPRepository codeOTPRepository;
 
-    public Boolean verificateCodeOTP(verificateCodeOTP recherchecode){
+    @Autowired
+    private ValidationRepository validationRepository;
+
+    public Boolean verificateCodeOTP(VerificationCodeOTP recherchecode){
         Boolean verification = false;
         CodeOTP code = new CodeOTP();
-        code = codeOTPRepository.findByCodeOTPAndByPartenaireEmail(recherchecode.getCode(), recherchecode.getEmail());
+        code = codeOTPRepository.findByCode(recherchecode.getCode());
         // Verification de la date de validation
         Calendar cal = Calendar.getInstance();
         cal.setTime(new Date());
 
-        if(cal.getTime().after(code.getDateExpiration()));
+        if(cal.getTime().after(code.getDateExpiration()) && code != null){
+            Validation v = new Validation();
+            v.setPartenaire(code.getPartenaire());
+            v.setTypeObjet("Réinitialisation de pin");
+            v.setDateCreate(new Date());
+            v.setStatus(false);
+            v = validationRepository.save(v);
             verification = true;
-        
+        }
+
         return verification;
     }
 
@@ -37,17 +49,17 @@ public class CodeOTPService {
 
         Calendar cal = Calendar.getInstance();
         cal.setTime(new Date());
-        code.setCode(stringRandom());
+        code.setCode(codeGenerique());
         code.setDateCreate(cal.getTime());
         cal.add(Calendar.MINUTE, 2);
         code.setDateExpiration(cal.getTime());
-        code.setPartenaireID(p.getId());
+        code.setPartenaire(p);
         
         return codeOTPRepository.save(code);
 
     }
 
-    private String stringRandom(){
+    private String codeGenerique(){
         String str = "";
         for(int i = 0; i<10; i++){
             Random rand = new Random();

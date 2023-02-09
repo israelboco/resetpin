@@ -14,6 +14,9 @@ public class ValidationService {
     @Autowired
     private ValidationRepository validationRepository;
 
+    @Autowired
+    private PartenaireService partenaireService;
+
     public Validation saveValidation(Validation v){
         return validationRepository.save(v);
     }
@@ -22,13 +25,11 @@ public class ValidationService {
         return validationRepository.findByStatus(false, p);
     }
 
-    public Boolean traitementValidation(Validation v){
-        Boolean traitement = false;
+    public Validation  traitementValidation(int id){
+        Validation v = validationRepository.findById(id);
+        partenaireService.reinitialisablePin(v.getPartenaire());
         v.setStatus(true);
         v = validationRepository.save(v); 
-        if(v.getStatus()){
-            traitement = true;
-        }
-        return traitement;
+        return v;
     }
 }

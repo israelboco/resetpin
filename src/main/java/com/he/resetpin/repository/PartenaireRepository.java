@@ -7,5 +7,6 @@ import com.he.resetpin.model.Partenaire;
 public interface PartenaireRepository extends JpaRepository<Partenaire, Integer>{
     
     Partenaire findByEmail(String email);
+    Partenaire findById(int id);
     // Page<Cour> findAll(Pageable pageable);
 }
