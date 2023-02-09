@@ -64,11 +64,12 @@ public class PartenaireService {
 
     public Boolean verificatePin(Partenaire p, String pin2) throws NoSuchAlgorithmException, InvalidKeySpecException{
         Boolean verification = false;
+        Partenaire partenaire = partenaireRepository.findByEmail(p.getEmail());
         String pin;
         String salt;
         String encodePinVerificate;
-        pin = partenaireRepository.findByEmail(p.getEmail()).getPin(); 
-        salt = partenaireRepository.findByEmail(p.getEmail()).getSalt(); 
+        pin = partenaire.getPin(); 
+        salt = partenaire.getSalt(); 
         encodePinVerificate = encodePin(pin2, salt.getBytes(StandardCharsets.UTF_8));
         if(pin == encodePinVerificate){
             verification = true;
