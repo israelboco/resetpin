@@ -4,8 +4,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+// import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,8 +33,8 @@ public class ValidationController {
 		return response;
 	}
 
-	@PostMapping(path= "/traitementvalidation/{id}", consumes = {"application/json"})
-	public Response traitement(@PathVariable int id){
+	@PostMapping(path= "/traitementvalidation", consumes = {"application/json"})
+	public Response traitement(@RequestBody String id){
 		Response response = new Response();
 		response.setCode(200);
 		response.setMessage("traitement de la validation de reset pin");

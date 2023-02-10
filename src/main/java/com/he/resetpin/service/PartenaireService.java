@@ -3,19 +3,24 @@ package com.he.resetpin.service;
 
 import java.util.Date;
 
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
+// import javax.crypto.SecretKeyFactory;
+// import javax.crypto.spec.PBEKeySpec;
 
-import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
+
+// import java.nio.charset.StandardCharsets;
+// import java.security.NoSuchAlgorithmException;
+// import java.security.SecureRandom;
+// import java.security.spec.InvalidKeySpecException;
+// import java.security.spec.KeySpec;
 import java.util.Calendar;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.amdelamar.jhash.Hash;
+import com.amdelamar.jhash.exception.InvalidHashException;
 import com.he.resetpin.model.Partenaire;
 import com.he.resetpin.repository.PartenaireRepository;
 
@@ -25,14 +30,21 @@ public class PartenaireService {
     @Autowired
     private PartenaireRepository partenaireRepository;
 
+    public Page<Partenaire> getAll(Pageable p){
+        return partenaireRepository.findAll(p);
+    }
+
     public Partenaire getPartenaireByEmail(String email){
         return partenaireRepository.findByEmail(email);
+    }
+
+    public Partenaire getPartenaireByTelephone(String telephone){
+        return partenaireRepository.findByEmail(telephone);
     }
 
     public Partenaire savePartenaire(Partenaire p){
         p.setReinitialisable(false);
         p.setPin(null);
-        p.setSalt(null);
         return partenaireRepository.save(p);
     }
 
@@ -40,40 +52,31 @@ public class PartenaireService {
         return partenaireRepository.save(p);
     }
 
-    public String encodePin(String pin, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException{
-        KeySpec spec = new PBEKeySpec(pin.toCharArray(), salt, 65536, 128);
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-        byte[] hash = factory.generateSecret(spec).getEncoded();
-        return hash.toString();
-    }
+    // public String encodePin(String pin, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException{
+    //     KeySpec spec = new PBEKeySpec(pin.toCharArray(), salt, 65536, 128);
+    //     SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+    //     byte[] hash = factory.generateSecret(spec).getEncoded();
+    //     return hash.toString();
+    // }
 
-    public byte[] salt(){
-        SecureRandom random = new SecureRandom();
-        byte[] salts = new byte[16];
-        random.nextBytes(salts); 
-        return salts;
-    }
+    // public byte[] salt(){
+    //     SecureRandom random = new SecureRandom();
+    //     byte[] salts = new byte[16];
+    //     random.nextBytes(salts); 
+    //     return salts;
+    // }
 
-    public Partenaire createPin(Partenaire p, String pin) throws NoSuchAlgorithmException, InvalidKeySpecException{
-        byte[] salts = new byte[16];
-        salts = salt();
-        p.setSalt(salts.toString());
-        p.setPin(encodePin(pin, salts));
+
+    public Partenaire createPin(Partenaire p, String pin) {
+        p.setPin(Hash.password(pin.toCharArray()).create());
         return partenaireRepository.save(p);
     }
 
-    public Boolean verificatePin(Partenaire p, String pin2) throws NoSuchAlgorithmException, InvalidKeySpecException{
-        Boolean verification = false;
+    public Boolean verificatePin(Partenaire p, String pin2) throws InvalidHashException {
         Partenaire partenaire = partenaireRepository.findByEmail(p.getEmail());
-        String pin;
-        String salt;
-        String encodePinVerificate;
-        pin = partenaire.getPin(); 
-        salt = partenaire.getSalt(); 
-        encodePinVerificate = encodePin(pin2, salt.getBytes(StandardCharsets.UTF_8));
-        if(pin == encodePinVerificate){
-            verification = true;
-        }
+        String pin = partenaire.getPin(); 
+        Boolean verification = Hash.password(pin2.toCharArray()).verify(pin);
+        
         return verification;
     }
 

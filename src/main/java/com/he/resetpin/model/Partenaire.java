@@ -33,8 +33,6 @@ public class Partenaire {
     
     private String pin;
     
-    private String salt;
-    
     @Column(name="email")
     private String email;
     

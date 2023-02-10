@@ -25,8 +25,8 @@ public class ValidationService {
         return validationRepository.findByStatus(false, p);
     }
 
-    public Validation  traitementValidation(int id){
-        Validation v = validationRepository.findById(id);
+    public Validation  traitementValidation(String id){
+        Validation v = validationRepository.findById(Integer.parseInt(id));
         partenaireService.reinitialisablePin(v.getPartenaire());
         v.setStatus(true);
         v = validationRepository.save(v); 

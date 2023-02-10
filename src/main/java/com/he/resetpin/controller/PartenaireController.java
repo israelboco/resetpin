@@ -2,16 +2,22 @@ package com.he.resetpin.controller;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Calendar;
+import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.GetMapping;
 // import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
+// import org.springframework.web.client.RestTemplate;
 import org.springframework.web.bind.annotation.RequestBody;
 
-
+import com.amdelamar.jhash.exception.InvalidHashException;
 import com.he.resetpin.model.Partenaire;
 import com.he.resetpin.model.Response;
 import com.he.resetpin.model.VerificationCodeOTP;
@@ -28,13 +34,35 @@ public class PartenaireController {
     @Autowired
     private CodeOTPService codeOTPService;
 
+    @GetMapping(path="", produces= "application/json")
+	public Response getpartenaire(@RequestParam(defaultValue = "0") int page, 
+        @RequestParam(defaultValue = "3") int size) {
+        Pageable paging = PageRequest.of(page, size);
+		Response response = new Response();
+		response.setCode(200);
+		response.setMessage("lites des validations en attente");
+		response.setData(partenaireService.getAll(paging));
+		
+		return response;
+	}
+
     @PostMapping(path="", consumes = {"application/json"})
     public Response savePartenaire(@RequestBody Partenaire p){
-        
+        Partenaire partenaireEmail = partenaireService.getPartenaireByEmail(p.getEmail());
+        Partenaire partenaireTelephone = partenaireService.getPartenaireByTelephone(p.getTelephone());
         Response response = new Response();
-        response.setCode(200);
-        response.setMessage("partenaire creer");
-        response.setData(partenaireService.savePartenaire(p));
+        // Email incorrete
+        if(partenaireEmail != null || partenaireTelephone != null){
+            response.setCode(200);
+            response.setMessage("email ou telephone exite");
+        }
+        // Creation du pin
+        else {
+            response.setCode(200);
+            response.setMessage("partenaire creer");
+            response.setData(partenaireService.savePartenaire(p));
+        }
+        
         return response;
     }
 
@@ -45,7 +73,7 @@ public class PartenaireController {
         // Email incorrete
         if(p == null){
             response.setCode(200);
-            response.setMessage("email incorrete : " + emailcode);
+            response.setMessage("email incorrete : ");
         }
         // Creation du pin
         else {
@@ -57,19 +85,21 @@ public class PartenaireController {
     }
 
     @PostMapping("/demandereinitialisation")
-    public Response demandeReinitialisation(@RequestBody String email) throws NoSuchAlgorithmException, InvalidKeySpecException{
-        Partenaire p = partenaireService.getPartenaireByEmail(email);
+    public Response demandeReinitialisation(@RequestBody Partenaire partenaire) throws NoSuchAlgorithmException, InvalidKeySpecException{
+        Partenaire p = partenaireService.getPartenaireByEmail(partenaire.getEmail());
         Response response = new Response();
         // Email incorrete
         if(p == null){
             response.setCode(200);
-            response.setMessage("email incorrete : " + email);
+            response.setMessage("email incorrete : ");
         }
         // Reset pin
         else if(p.getReinitialisable()) {
-            String url = "127.0.0.1:8080/api/partenaire/resetpin";
-            RestTemplate restTemplate = new RestTemplate();
-            response = restTemplate.getForObject(url, Response.class, p);
+            // String url = "127.0.0.1:8080/api/partenaire/resetpin";
+            // RestTemplate restTemplate = new RestTemplate();
+            // response = restTemplate.getForObject(url, Response.class, partenaire);
+            response.setCode(200);
+            response.setMessage("pin reinitialisable redirection:  127.0.0.1:8080/api/partenaire/resetpin");
         }
         // Creation de code OTP
         else{
@@ -84,22 +114,29 @@ public class PartenaireController {
     public Response resetPin(@RequestBody Partenaire partenaire) throws NoSuchAlgorithmException, InvalidKeySpecException{
         Partenaire p = partenaireService.getPartenaireByEmail(partenaire.getEmail());
         Response response = new Response();
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(new Date());
         // Email incorrete
         if(p.getId() == 0){
             response.setCode(200);
             response.setMessage("email incorrete");
         }
         // Creation du pin
+        else if(p.getReinitialisable()) {
+            // if(p.getDateReinitialisation().after(cal.getTime()))
+            response.setCode(200);
+            response.setMessage("pin regeneré");
+            response.setData(partenaireService.createPin(p, partenaire.getPin()));
+        }
         else {
             response.setCode(200);
-            response.setMessage("pin generé");
-            response.setData(partenaireService.createPin(p, partenaire.getPin()));
+            response.setMessage("le pin n'est pas regenererable, faites une demande");
         }
         return response;
     }
 
     @PostMapping(path="/verificationpin", consumes = {"application/json"})
-    public Response verificatePin(@RequestBody Partenaire partenaire) throws NoSuchAlgorithmException, InvalidKeySpecException{
+    public Response verificatePin(@RequestBody Partenaire partenaire) throws InvalidHashException{
         Partenaire p = partenaireService.getPartenaireByEmail(partenaire.getEmail());
         Response response = new Response();
         // Email incorrete
@@ -129,10 +166,13 @@ public class PartenaireController {
             response.setMessage("email incorrete");
         }
         // Enregitrement de la validation si certification reussi
-        else{
+        else if(codeOTPService.verificateCodeOTP(valeur)) {
             response.setCode(200);
             response.setMessage("codeOTP certifié");
-            response.setData(codeOTPService.verificateCodeOTP(valeur));
+        }
+        else {
+            response.setCode(200);
+            response.setMessage("codeOTP incorrete ou expiré");
         }
         return response;
     }
